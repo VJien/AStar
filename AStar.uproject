@@ -1,0 +1,16 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{C1BEB66B-4E5C-596D-0FCD-7B9870DCDEB3}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "AStar",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"UMG"
+			]
+		}
+	]
+}

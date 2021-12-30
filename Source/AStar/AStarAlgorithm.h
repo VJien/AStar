@@ -3,13 +3,14 @@
 #include "AStarAlgorithm.generated.h"
 
 USTRUCT()
-struct FChessData
+struct FGridData
 {
 	GENERATED_BODY()
-	FChessData(): G(0),H(0),Coord(0,0),ParentCoord(0,0)
+	FGridData(): G(0),H(0),Coord(FIntPoint::NoneValue),ParentCoord(FIntPoint::NoneValue)
 	{}
-	FChessData(FIntPoint Parent):G(0),H(0),Coord(0,0),ParentCoord(Parent)
+	FGridData(FIntPoint InCoord): G(0),H(0),Coord(InCoord),ParentCoord(FIntPoint::NoneValue)
 	{}
+	
 	UPROPERTY()
 	int32 G;
 	UPROPERTY()
@@ -19,15 +20,23 @@ struct FChessData
 	UPROPERTY()
 	FIntPoint ParentCoord;
 
-	FORCEINLINE virtual bool operator==(const FChessData& Other)const
+	FORCEINLINE virtual bool operator==(const FGridData& Other)const
 	{
-		return G == Other.G && H == Other.H && Coord == Other.Coord && ParentCoord == Other.ParentCoord;
+		return  Coord == Other.Coord;
 	}
-	FORCEINLINE virtual bool operator!=(const FChessData& Other)const
+	FORCEINLINE virtual bool operator==(const FIntPoint& Point)const
+	{
+		return  Coord == Point;
+	}
+	FORCEINLINE virtual bool operator!=(const FGridData& Other)const
 	{
 		return !(*this == Other);
 	}
-	FORCEINLINE virtual bool operator<(const FChessData& Other)const
+	FORCEINLINE virtual bool operator!=(const FIntPoint& Point)const
+	{
+		return !(*this == Point);
+	}
+	FORCEINLINE virtual bool operator<(const FGridData& Other)const
 	{
 		return G + H < Other.G + Other.H;
 	}
@@ -39,17 +48,32 @@ class FAStarAlgorithm final : public IAlgorithm
 {
 public:
 	//Next-TODO: 在这设置数据结构
+	//所有棋盘格的数据,只用于回溯,与本案例无直接关系
 	UPROPERTY()
-	TMap<FIntPoint, FChessData> OpenChess;
+	TArray<FGridData> AllGrids;
+	//最终的路径,与本案例无直接关系
 	UPROPERTY()
-	TArray<FIntPoint> CloseChess;
-
+	TArray<FIntPoint> Path;
+    	
+    	
+	//开放的棋盘格
+	UPROPERTY()
+	TArray<FGridData> OpenGrids;
+	//关闭的棋盘格
+	UPROPERTY()
+	TArray<FIntPoint> CloseGrids;
 	
+
+	//使用曼哈顿距离计算2点距离
 	UFUNCTION()
 	int32 GetDistanceManhattan(const FIntPoint& Current, const FIntPoint& Target);
 
-
-
-	
 	virtual FIntPoint Step(FGridMap const& Map, FIntPoint const& CurrentPoint) override;
+	
+	//这两个函数跟本案例无直接关系 
+	//↓↓↓↓↓↓↓↓↓↓
+	UFUNCTION()
+	void BuildPath(const FGridData& EndPoint);
+	UFUNCTION()
+	void PrintDebug();
 };

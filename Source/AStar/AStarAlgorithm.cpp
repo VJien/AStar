@@ -1,91 +1,131 @@
 ﻿#include "AStarAlgorithm.h"
 
+#include "AStarLog.h"
+#include "Kismet/KismetArrayLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+PRAGMA_DISABLE_OPTIMIZATION
 
 int32 FAStarAlgorithm::GetDistanceManhattan(const FIntPoint& Current, const FIntPoint& Target)
 {
 	return FMath::Abs(Current.X - Target.X) + FMath::Abs(Current.Y - Target.Y);
 }
 
-
-/*
-* A*寻路算法目标：
-* 给定节点图，并给定起始点和终点，目标是快速找到从起始点到终点的最短路径。
-* 
-* 算法原理：
-* 小人从起始点开始，以一步（走到相邻节点）为单位，遍历所有的节点，对每个节点计算到start点的路径距离
-* 直到到达终点，或者所有点都已经被遍历（没找到路径）
-* 
-* 实现细节：
-* close_set：小人已经走到过的节点
-* open_set：小人已经发现的节点（小人已经走到过的节点的相邻节点）
-* 估算路径长度公式： f(cur_node) = g(cur_node) +h(cur_node)
-* g:起始点到cur_node的最短路径的确认长度
-* h:cur_node到终点的路径估算长度
-* f:经过cur_node的最短路径的估算长度
-* 
-* 1.在open_set中选择f最小的节点，遍历所有的不在close_set中的相邻点
-* 2.1相邻点如果是新发现节点，那么计算g和f值，并记录路径（记录parent_node）
-* 2.2如果是旧节点，那么计算g值，如果小于当前的g值，那么更新路径
-* 3.相邻点遍历完成后，跳转到1
-* 
-* 结束条件1：目标点被找到，路径寻找成功
-* 结束条件2：open_set中没有节点，路径寻找失败
- */
 FIntPoint FAStarAlgorithm::Step(FGridMap const& Map, FIntPoint const& CurrentPoint)
 {
 	// Next-TODO: 在这实现 A* 寻路算法：
+	//这里remove的是FIntPoint数据, 不是Data数据, 所以需要FGridData有相应的构造函数以及重写对应的==操作符
+	OpenGrids.Remove(CurrentPoint);
+	CloseGrids.AddUnique(CurrentPoint);
+	if (CurrentPoint == Map.Start)
+	{
+		AllGrids.AddUnique(FGridData(CurrentPoint));
+	}
 	constexpr int DirectionsCount = 4;
 	const FIntPoint Directions[DirectionsCount] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
-	if (OpenChess.Num() == 0)
+	//上下左右4个方向的临近点查询
+	for (int32 i = 0 ; i < DirectionsCount; ++i)
 	{
-		for (int32 i = 0 ; i < DirectionsCount; ++i)
+		FIntPoint NewPoint = CurrentPoint + Directions[i];
+		if (!CloseGrids.Contains(NewPoint))
 		{
-			FIntPoint NewPoint = CurrentPoint + Directions[i];
-			if (!CloseChess.Contains(NewPoint))
+			//构建Data数据, parent设置为当前点用于回溯
+			FGridData NewData;
+			NewData.ParentCoord = CurrentPoint;
+			NewData.G = GetDistanceManhattan(CurrentPoint, NewPoint);
+			NewData.H = GetDistanceManhattan(NewPoint, Map.End);
+			NewData.Coord = NewPoint;
+			
+			//如果已经在开放列表的,那么需要替换Parent
+			if(OpenGrids.Contains(NewData))
 			{
-				FChessData NewData(CurrentPoint);
-				NewData.G = GetDistanceManhattan(CurrentPoint, NewPoint);
-				NewData.H = GetDistanceManhattan(NewPoint, Map.End);
-				NewData.Coord = NewPoint;
-				switch (Map.GetGridStateAt(NewPoint))
-				{
-				case EGridState::Unreached:
-					{
-						OpenChess.Emplace(NewPoint,NewData);
-					}
-				case EGridState::Invalid:
-					{
-						CloseChess.AddUnique(NewPoint);
-					}
-				case EGridState::Wall:
-					{
-						CloseChess.AddUnique(NewPoint);
-					}
-				case EGridState::End:
-					return NewPoint;
-				default:
-					break;
-				}
+				int32 idx = AllGrids.Find(NewData);
+				AllGrids[idx].ParentCoord = CurrentPoint;
 			}
 			
+			
+			EGridState State = Map.GetGridStateAt(NewPoint);
+			if (State == EGridState::End)
+			{
+				//添加到All数组
+				AllGrids.AddUnique(NewData);
+				
+				// 这个路径跟本案例无关,只是为了走一下AStar的流程
+				BuildPath(NewData);
+				PrintDebug();
+				return NewPoint;
+			}
+			else if (State == EGridState::Unreached)
+			{
+				//添加到All数组
+				AllGrids.AddUnique(NewData);
+				OpenGrids.Emplace(NewData);
+			}
+			else
+			{
+				CloseGrids.AddUnique(NewPoint);
+			}
+
 		}
 	}
-	if (OpenChess.Contains(Map.End))
+	//排序并直接返回开销最小的点
+	if (OpenGrids.Num()>0)
 	{
-		return Map.End;
-	}
-	if (OpenChess.Num()>0)
-	{
-			OpenChess.ValueSort([](FChessData A, FChessData B)
+			OpenGrids.Sort([](FGridData A, FGridData B)
 		{
 			return A < B;
 		});
-		return OpenChess[0].Coord;
+		UE_LOG(LogTemp, Warning, TEXT("路径点 = %d,%d \n"), OpenGrids[0].Coord.X, OpenGrids[0].Coord.Y);
+		return OpenGrids[0].Coord;
 	}
-	
-
-	
-	
-	
 	return CurrentPoint;
 };
+
+void FAStarAlgorithm::BuildPath(const FGridData& EndPoint)
+{
+	Path.Empty();
+	int32 currIdx = AllGrids.Find(EndPoint);
+	if (!AllGrids.IsValidIndex(currIdx))
+	{
+		return;
+	}
+	FGridData CurrData = AllGrids[currIdx];
+	while (CurrData.Coord!= FIntPoint::NoneValue)
+	{
+		Path.Emplace(CurrData.Coord);
+		if (CurrData.ParentCoord != FIntPoint::NoneValue)
+		{
+			int32 parentIdx = AllGrids.Find(CurrData.ParentCoord);
+			if (AllGrids.IsValidIndex(parentIdx))
+			{
+				CurrData = AllGrids[parentIdx];
+			}
+			else
+			{
+				break;
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	//反转数组
+	const int32 ArraySize = Path.Num();
+	for (int32 i = 0, i2 = ArraySize - 1; i < ArraySize / 2 ; ++i, --i2)
+	{
+		Path.Swap(i, i2);
+	}
+
+}
+void FAStarAlgorithm::PrintDebug()
+{
+	for (int32 i = 0; i< Path.Num(); ++i)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("路径 [%d] = %s \n"), i, *Path[i].ToString());
+		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, FString::Printf(TEXT("路径 [%d] = %s \n"),i, *Path[i].ToString()));
+	}
+}
+
+PRAGMA_ENABLE_OPTIMIZATION

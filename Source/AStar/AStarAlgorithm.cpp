@@ -6,7 +6,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 
 PRAGMA_DISABLE_OPTIMIZATION
-
 int32 FAStarAlgorithm::GetDistanceManhattan(const FIntPoint& Current, const FIntPoint& Target)
 {
 	return FMath::Abs(Current.X - Target.X) + FMath::Abs(Current.Y - Target.Y);
@@ -36,21 +35,17 @@ FIntPoint FAStarAlgorithm::Step(FGridMap const& Map, FIntPoint const& CurrentPoi
 			NewData.G = GetDistanceManhattan(CurrentPoint, NewPoint);
 			NewData.H = GetDistanceManhattan(NewPoint, Map.End);
 			NewData.Coord = NewPoint;
-			
 			//如果已经在开放列表的,那么需要替换Parent
 			if(OpenGrids.Contains(NewData))
 			{
 				int32 idx = AllGrids.Find(NewData);
 				AllGrids[idx].ParentCoord = CurrentPoint;
 			}
-			
-			
 			EGridState State = Map.GetGridStateAt(NewPoint);
 			if (State == EGridState::End)
 			{
 				//添加到All数组
 				AllGrids.AddUnique(NewData);
-				
 				// 这个路径跟本案例无关,只是为了走一下AStar的流程
 				BuildPath(NewData);
 				PrintDebug();
@@ -80,8 +75,9 @@ FIntPoint FAStarAlgorithm::Step(FGridMap const& Map, FIntPoint const& CurrentPoi
 		return OpenGrids[0].Coord;
 	}
 	return CurrentPoint;
+	
+	
 };
-
 void FAStarAlgorithm::BuildPath(const FGridData& EndPoint)
 {
 	Path.Empty();
@@ -126,6 +122,6 @@ void FAStarAlgorithm::PrintDebug()
 		UE_LOG(LogTemp, Warning, TEXT("路径 [%d] = %s \n"), i, *Path[i].ToString());
 		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, FString::Printf(TEXT("路径 [%d] = %s \n"),i, *Path[i].ToString()));
 	}
+	
 }
-
 PRAGMA_ENABLE_OPTIMIZATION

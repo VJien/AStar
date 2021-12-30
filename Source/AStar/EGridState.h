@@ -10,4 +10,5 @@ enum class EGridState : uint8
 	Start, // 起点
 	End, // 终点
 	Wall, // 墙体
+	Final
 };

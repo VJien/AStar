@@ -84,3 +84,5 @@ EGridState FGridMap::GetGridStateAt(FIntPoint const& Point) const
 	}
 	return EGridState::Invalid;
 }
+
+

@@ -36,9 +36,9 @@ struct FGridData
 	{
 		return !(*this == Point);
 	}
-	FORCEINLINE virtual bool operator<(const FGridData& Other)const
+	FORCEINLINE virtual bool operator>(const FGridData& Other)const
 	{
-		return G + H < Other.G + Other.H;
+		return G + H > Other.G + Other.H;
 	}
 	
 };

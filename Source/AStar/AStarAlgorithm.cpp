@@ -27,41 +27,39 @@ FIntPoint FAStarAlgorithm::Step(FGridMap const& Map, FIntPoint const& CurrentPoi
 	for (int32 i = 0 ; i < DirectionsCount; ++i)
 	{
 		FIntPoint NewPoint = CurrentPoint + Directions[i];
-		if (!CloseGrids.Contains(NewPoint))
+		if (CloseGrids.Contains(NewPoint))
 		{
-			//构建Data数据, parent设置为当前点用于回溯
-			FGridData NewData;
-			NewData.ParentCoord = CurrentPoint;
-			NewData.G = GetDistanceManhattan(CurrentPoint, NewPoint);
-			NewData.H = GetDistanceManhattan(NewPoint, Map.End);
-			NewData.Coord = NewPoint;
-			//如果已经在开放列表的,那么需要替换Parent
-			if(OpenGrids.Contains(NewData))
-			{
-				int32 idx = AllGrids.Find(NewData);
-				AllGrids[idx].ParentCoord = CurrentPoint;
-			}
-			EGridState State = Map.GetGridStateAt(NewPoint);
-			if (State == EGridState::End)
-			{
-				//添加到All数组
-				AllGrids.AddUnique(NewData);
-				// 这个路径跟本案例无关,只是为了走一下AStar的流程
-				BuildPath(NewData);
-				PrintDebug();
-				return NewPoint;
-			}
-			else if (State == EGridState::Unreached)
-			{
-				//添加到All数组
-				AllGrids.AddUnique(NewData);
-				OpenGrids.Emplace(NewData);
-			}
-			else
-			{
-				CloseGrids.AddUnique(NewPoint);
-			}
-
+			continue;
+		}
+		//构建Data数据, parent设置为当前点用于回溯
+		FGridData NewData;
+		NewData.ParentCoord = CurrentPoint;
+		NewData.G = GetDistanceManhattan(CurrentPoint, NewPoint);
+		NewData.H = GetDistanceManhattan(NewPoint, Map.End);
+		NewData.Coord = NewPoint;
+		//如果已经在开放列表的,那么需要替换Parent
+		if(OpenGrids.Contains(NewData))
+		{
+			int32 idx = AllGrids.Find(NewData);
+			AllGrids[idx].ParentCoord = CurrentPoint;
+		}
+		EGridState State = Map.GetGridStateAt(NewPoint);
+		if (State == EGridState::End)
+		{
+			AllGrids.AddUnique(NewData);
+			// 这个路径跟本案例无关,只是为了走一下AStar的流程
+			BuildPath(NewData);
+			PrintDebug();
+			return NewPoint;
+		}
+		else if (State == EGridState::Unreached)
+		{
+			AllGrids.AddUnique(NewData);
+			OpenGrids.Emplace(NewData);
+		}
+		else
+		{
+			CloseGrids.AddUnique(NewPoint);
 		}
 	}
 	//排序并直接返回开销最小的点
@@ -69,10 +67,10 @@ FIntPoint FAStarAlgorithm::Step(FGridMap const& Map, FIntPoint const& CurrentPoi
 	{
 			OpenGrids.Sort([](FGridData A, FGridData B)
 		{
-			return A < B;
+			return A > B;
 		});
-		UE_LOG(LogTemp, Warning, TEXT("路径点 = %d,%d \n"), OpenGrids[0].Coord.X, OpenGrids[0].Coord.Y);
-		return OpenGrids[0].Coord;
+		UE_LOG(LogTemp, Warning, TEXT("当前走过路径点 = %d,%d \n"), OpenGrids.Last().Coord.X, OpenGrids.Last().Coord.Y);
+		return OpenGrids.Last().Coord;
 	}
 	return CurrentPoint;
 	

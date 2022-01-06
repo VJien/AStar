@@ -45,3 +45,5 @@ Source/.idea/
 /initproject.bat
 /Plugins/SkinnedDecalComponent/Intermediate
 /Plugins/SkinnedDecalComponent/Binaries
+*.rar
+
